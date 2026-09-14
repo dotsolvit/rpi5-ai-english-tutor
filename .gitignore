@@ -1,0 +1,18 @@
+# Python environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Configuration & Secrets (CRITICAL)
+.env
+
+# Application Runtime Logs & Local Files
+billing_log.txt
+voice_*.ogg
+voice_*.mp3
+reply_*.mp3
+
+# Operating System specific files
+.DS_Store
+Thumbs.db
