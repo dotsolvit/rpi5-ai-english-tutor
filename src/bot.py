@@ -1,4 +1,4 @@
-#RPi5EnglishTutor bot.py v3.0
+#RPi5EnglishTutor bot.py v4.0
 #15.09.2026
 
 import os
@@ -12,11 +12,16 @@ from openai import AsyncOpenAI
 # ІНІЦІАЛІЗАЦІЯ ТА КОНФІГУРАЦІЯ / INITIALIZATION & CONFIGURATION
 # ==============================================================================
 
+# КОНТРОЛЬ РОЗМІРУ ПАМ'ЯТІ / CONTEXT MEMORY LIMIT (SLIDING WINDOW) #v4.0
+# 1 системний промпт + 20 реплік діалогу (10 ваших і 10 від ШІ)
+# 1 system prompt + 20 dialogue turns (10 from you and 10 from the AI)
+MAX_MEMORY = 21  
+
 # Завантажуємо конфігурацію та фінансові коефіцієнти з прихованого файлу .env
 # Load configuration and financial coefficients from the hidden .env file
 load_dotenv()
 
-ALLOWED_ID = int(os.getenv("ALLOWED_TELEGRAM_ID", 0))  #v3.0
+ALLOWED_ID = int(os.getenv("ALLOWED_TELEGRAM_ID", 0))  
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -130,7 +135,7 @@ def log_and_calculate_cost(whisper_sec: float, gpt_input: int, gpt_output: int, 
 async def cmd_start(message: types.Message):
     chat_id = message.chat.id
 
-    # Перевірка: якщо пише сторонній користувач #v3.0
+    # Перевірка: якщо пише сторонній користувач/Check: if an external user is writing 
     if chat_id != ALLOWED_ID:
         await message.answer("🔒 Sorry, this is a private tutor bot. Access denied.")
         return  # Зупиняємо виконання, код далі не спрацює
@@ -150,7 +155,7 @@ async def cmd_start(message: types.Message):
 async def handle_voice_message(message: types.Message):
     chat_id = message.chat.id
 
-    # Перевірка: якщо пише сторонній користувач #v3.0
+    # Перевірка: якщо пише сторонній користувач/Check: if an external user is writing
     if chat_id != ALLOWED_ID:
         await message.answer("🔒 Access denied. You are not authorized to use this tutor.")
         return  # Зупиняємо виконання, код далі не спрацює
@@ -188,6 +193,11 @@ async def handle_voice_message(message: types.Message):
         
         ai_response_text = response.choices[0].message.content
         chat_histories[chat_id].append({"role": "assistant", "content": ai_response_text})
+        if len(chat_histories[chat_id]) > MAX_MEMORY:      #v4.0
+            # Видаляємо найстарішу пару (один запит користувача та одну відповідь ШІ)
+            # Елемент [0] не чіпаємо — це SYSTEM_PROMPT! Видаляємо [1] та [2]
+            chat_histories[chat_id].pop(1)  # Видаляємо найстаріший user_text
+            chat_histories[chat_id].pop(1)  # Видаляємо найстаріший ai_response_text
 
         gpt_in_tokens = response.usage.prompt_tokens
         gpt_out_tokens = response.usage.completion_tokens
