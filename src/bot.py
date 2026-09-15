@@ -1,5 +1,5 @@
-#RPi5EnglishTutor bot.py v2
-#13.09.2026
+#RPi5EnglishTutor bot.py v3.0
+#15.09.2026
 
 import os
 import asyncio
@@ -16,6 +16,7 @@ from openai import AsyncOpenAI
 # Load configuration and financial coefficients from the hidden .env file
 load_dotenv()
 
+ALLOWED_ID = int(os.getenv("ALLOWED_TELEGRAM_ID", 0))  #v3.0
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -128,6 +129,12 @@ def log_and_calculate_cost(whisper_sec: float, gpt_input: int, gpt_output: int, 
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
     chat_id = message.chat.id
+
+    # Перевірка: якщо пише сторонній користувач #v3.0
+    if chat_id != ALLOWED_ID:
+        await message.answer("🔒 Sorry, this is a private tutor bot. Access denied.")
+        return  # Зупиняємо виконання, код далі не спрацює
+
     chat_histories[chat_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
     _, total_spent = get_last_financial_totals()
     
@@ -142,6 +149,12 @@ async def cmd_start(message: types.Message):
 @dp.message(F.voice)
 async def handle_voice_message(message: types.Message):
     chat_id = message.chat.id
+
+    # Перевірка: якщо пише сторонній користувач #v3.0
+    if chat_id != ALLOWED_ID:
+        await message.answer("🔒 Access denied. You are not authorized to use this tutor.")
+        return  # Зупиняємо виконання, код далі не спрацює
+    
     if chat_id not in chat_histories:
         chat_histories[chat_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
         
